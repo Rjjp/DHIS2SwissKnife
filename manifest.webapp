@@ -1,0 +1,21 @@
+{
+    "version": "beta.1",
+    "name": "DHIS2 Swiss Knife ",
+    "description": "DHIS2 Swiss Knife App",
+    "launch_path": "index.html",
+    "appType": "APP",
+    "icons": {
+            "48": "img/icons/logo.png"
+    },
+    "developer": {
+        "url": "http://www.pomareta.ch",
+        "name": "Ramon Jose Jimenez Pomareta",
+        "company": "WHO",
+        "email": "ramon@pomareta.ch"
+    },
+    "activities": {
+        "dhis": {
+            "href": "*"
+        }
+    }
+}
