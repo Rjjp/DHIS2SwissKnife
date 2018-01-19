@@ -9,6 +9,9 @@
   <script src="https://dhis2-cdn.org/v222/openlayers/OpenLayers.js"></script>
 <script type="text/javascript" src="https://dhis2-cdn.org/v226/plugin/map.js"></script>
 <script lang="javascript" src="tree.js"></script>
+<script lang="javascript" src="inputControl.js"></script>
+<script lang="javascript" src="libraries/xlsx/0.11.3/xlsx.full.min.js"></script>
+<script lang="javascript" src="excelImport.js"></script>
 
 
 
@@ -543,36 +546,12 @@
         }
     }
 
+    function doNothing(){
 
-    function autocompleteSearcher(elementId, dataSource, callbackFunction, minLength){
-        $( "#"+elementId ).autocomplete({
-            source: dataSource,
-            select: function(event, ui) {
-                event.preventDefault();
-                $("#"+elementId).val(ui.item.label);
-                $("#"+elementId).text(ui.item.value);
-                callbackFunction(ui.item);
-            },
-            focus: function(event, ui) {
-                event.preventDefault();
-                $("#"+elementId).val(ui.item.label);
-                $("#"+elementId).text(ui.item.value);
-
-            },
-            change: function (event, ui) {
-                if(!ui.item){
-                    //http://api.jqueryui.com/autocomplete/#event-change -
-                    // The item selected from the menu, if any. Otherwise the property is null
-                    //so clear the item for force selection
-                    $("#"+elementId).val("");
-                    $("#"+elementId).text("");
-                }
-
-            },
-            delay: 500,
-            minLength: minLength
-        });
     }
+
+
+
 
     function orgUnitsDataSourceFunction (request, response) {
         var params = {
@@ -596,6 +575,12 @@
 
     } 
 
+
+    function processSheet(array, sheetNo){
+        console.log("Sheet no " + sheetNo + " first element :");
+        console.log(array[0]);
+    }
+
     $(document).ready(function(){
 
         chartsDiv = $('#charts').html();
@@ -613,14 +598,7 @@
             updateFeedback("", "", "");
         });
 
-        // Modifies the autocomplete filter in order to match also other fields than label
-        $.ui.autocomplete.filter = function (array, term) {
-            var matcher = new RegExp('(^| )' + $.ui.autocomplete.escapeRegex(term), 'i');
-            return $.grep(array, function (value) {
-                return matcher.test(value.label) || matcher.test(value.value) || matcher.test(value.code) || matcher.test(value.name) || matcher.test(value);
-            });
-        };
-       
+
         
         $.when(
             get("programs", "id,name")
@@ -701,6 +679,20 @@
 
         });
 
+
+        /* OrgUnit Creator */
+        autocompleteSearcher("firstColumn", excelHeaders, doNothing, 0);
+        autocompleteSearcher("lastColumn", excelHeaders, doNothing, 0);
+        autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
+        autocompleteSearcher("firstRow", generateNumbers(1,100,ASC), doNothing, 0);
+
+        $( "#firstColumn" ).change(function() {
+            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
+        });
+        $( "#lastColumn" ).change(function() {
+            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
+        });
+
 /*
         // Datepicker
         var dateFormat = "mm/dd/yy",
@@ -771,11 +763,12 @@ function toLog(text){
 			
 		
 		</div>
-        <div id="container">
+        <div class="content-area">
             <div id="tabs">
                 <ul>
                     <li><a href="#tabs-1">1. Program data</a></li>
                     <li><a href="#tabs-2">2. Aggregated data</a></li>
+                    <li><a href="#tabs-3">3. OrgUnits Creator</a></li>
                 </ul>
                 <div id="tabs-1">	
                     <div>
@@ -812,22 +805,22 @@ function toLog(text){
                     <button id="apply" >Apply!</button>
                 </div>
                 <div id="tabs-2">	
-                        <div>
-                            <label for="orgUnits">orgUnits: </label>
-                            <input id="orgUnits">
+                    <div>
+                        <label for="orgUnits">orgUnits: </label>
+                        <input id="orgUnits">
+                    </div>
+                    <div class="listDiv"><ul id="orgUnitsList"></ul></div>
+                    <div>
+                        <label for="orgUnitsGroups">orgUnitsGroups: </label>
+                        <input id="orgUnitsGroups">
+                    </div>
+                    <div disabled class="listDiv"><ul id="orgUnitsGroupsList"></ul></div>
+                    <div>
+                            <label for="dataElements">dataElements: </label>
+                            <input id="dataElements">
                         </div>
-                        <div class="listDiv"><ul id="orgUnitsList"></ul></div>
-                        <div>
-                            <label for="orgUnitsGroups">orgUnitsGroups: </label>
-                            <input id="orgUnitsGroups">
-                        </div>
-                        <div disabled class="listDiv"><ul id="orgUnitsGroupsList"></ul></div>
-                        <div>
-                                <label for="dataElements">dataElements: </label>
-                                <input id="dataElements">
-                            </div>
-                            <div class="listDiv"><ul id="dataElementsList"></ul></div>
-                        <div>
+                        <div class="listDiv"><ul id="dataElementsList"></ul></div>
+                    <div>
                         <label for="from">From</label>
                         <input type="text" id="from" name="from">
                         <label for="to">to</label>
@@ -837,10 +830,37 @@ function toLog(text){
                         <button id="apply" >Delete this Data!</button>
                         <div class="listDiv"><ul id="dataValuesDeletedList"></ul></div>
                         
+                    </div>
+                    
+                </div>
+                <div id="tabs-3">	
+                    <table style="width:100%">
+                        <tr>
+                            <td>First column</td>
+                            <td><input id="firstColumn" class="input_small"></td> 
+                        </tr>
+                        <tr>
+                            <td>Last colum</td>
+                            <td><input id="lastColumn" class="input_small"></td> 
+                        </tr>
+                        <tr>
+                            <td>First row</td>
+                            <td><input id="firstRow" class="input_small"></td> 
+                        </tr>
+                        <tr>
+                            <td>Col reference</td>
+                            <td><input id="refColumn" class="input_small"></td> 
+                            <td></td> 
+                        </tr>
+                    </table>
+                    <div id="drop" class="drop">Drop the spreadsheet file here </div>     
+                    <form id="importFilesForm">                     
+                        <input type="file" name="xlfile" id="import_end" accept=".xls,.xlsx" class="inputFile ui-button ui-widget ui-corner-all">or select it here</input>
+                    </form>   
                 </div>
             </div>
         </div>
-        <div id="footer"> Swiss Knife App vbeta.2 29.11.2017 </div>
+        <div id="footer"> Swiss Knife App vbeta.3 19.01.2018 </div>
         
     </body>
 </html>
