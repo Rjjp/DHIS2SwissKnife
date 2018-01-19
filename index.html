@@ -1,5 +1,5 @@
 <script src="libraries/jquery/2.2.3/jquery.js"></script>
-<script src="libraries/jquery-ui/1.12.1/jquery-ui.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js" integrity="sha256-T0Vest3yCU7pafRw9r+settMBX6JkKN06dqBnpQ8d30=" crossorigin="anonymous"></script>
 <script type="text/javascript" src="../../../dhis-web-commons/javascripts/dhis2/dhis2.translate.js"></script>
 <script type="text/javascript" src="../../../dhis-web-commons/javascripts/dhis2/dhis2.menu.js"></script>
 <script type="text/javascript" src="../../../dhis-web-commons/javascripts/dhis2/dhis2.menu.ui.js"></script>
@@ -195,7 +195,7 @@
         });
     }
 
-    function deleteEvent(id){
+    function deleteEvent(id, callback){
         var builtUrl = buildAPIUrl(EVENTS);
         builtUrl += "/"+id;
         return $.ajax({
@@ -203,6 +203,7 @@
             type: 'DELETE'
             
         }).then(function(data) {
+            callback();
             return data;
         });
     }
@@ -700,6 +701,38 @@
 
         });
 
+/*
+        // Datepicker
+        var dateFormat = "mm/dd/yy",
+        from = $( "#from" )
+            .datepicker({
+            defaultDate: "+1w",
+            changeMonth: true,
+            numberOfMonths: 3
+            })
+            .on( "change", function() {
+            to.datepicker( "option", "minDate", getDate( this ) );
+            }),
+        to = $( "#to" ).datepicker({
+            defaultDate: "+1w",
+            changeMonth: true,
+            numberOfMonths: 3
+        })
+        .on( "change", function() {
+            from.datepicker( "option", "maxDate", getDate( this ) );
+        });
+    
+        function getDate( element ) {
+        var date;
+        try {
+            date = $.datepicker.parseDate( dateFormat, element.value );
+        } catch( error ) {
+            date = null;
+        }
+    
+        return date;
+        }
+*/
         
     });
 
@@ -713,10 +746,10 @@ function toLog(text){
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Stock Warehouse App</title>
+		<title>Swiss Knife App</title>
 		<meta charset="utf-8">	
         <link rel="stylesheet" href="css/style.css">
-        <link rel="stylesheet" href="libraries/jquery-ui/1.12.1/jquery-ui.css">
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
         <!-- Stylesheets related to the menu -->
 		<link type="text/css" rel="stylesheet" href="../../../dhis-web-commons/font-awesome/css/font-awesome.min.css"/>
@@ -739,47 +772,75 @@ function toLog(text){
 		
 		</div>
         <div id="container">
+            <div id="tabs">
+                <ul>
+                    <li><a href="#tabs-1">1. Program data</a></li>
+                    <li><a href="#tabs-2">2. Aggregated data</a></li>
+                </ul>
+                <div id="tabs-1">	
+                    <div>
+                        <label for="program">Program: </label>
+                        <input id="program">
+                    </div>
+                    
+                    
+                    <div>
+                        <label for="orgUnit">OrgUnit: </label>
+                        <input id="orgUnit">
+                    </div>
 
-            <div class="content-area">
+                    <div>
+                        <label for="extraParams">More params. Add &: </label>
+                        <input id="extraParams">
+                    </div>
 
-              
-                </textarea>
-                <div>
-                    <label for="program">Program: </label>
-                    <input id="program">
+                    <button id="search" >Search!</button>
+                    
+                    
+                    <fieldset>
+                        <legend>Add / Remove / Set </legend>
+                        <label for="addCheckbox">Add </label>
+                        <input disabled class="checkboxradio" type="radio" name="add" id="addCheckbox" >
+                        <label for="removeCheckbox">Remove </label>
+                        <input checked class="checkboxradio" type="radio" name="remove" id="removeCheckbox">
+                        <label for="setCheckbox">Set </label>
+                        <input disabled class="checkboxradio" type="radio" name="set" id="setCheckbox">
+                    </fieldset>
+                    
+                    <div class="listDiv"><ul id="eventList"></ul></div>
+
+                    <button id="apply" >Apply!</button>
                 </div>
-                
-                
-                <div>
-                    <label for="orgUnit">OrgUnit: </label>
-                    <input id="orgUnit">
+                <div id="tabs-2">	
+                        <div>
+                            <label for="orgUnits">orgUnits: </label>
+                            <input id="orgUnits">
+                        </div>
+                        <div class="listDiv"><ul id="orgUnitsList"></ul></div>
+                        <div>
+                            <label for="orgUnitsGroups">orgUnitsGroups: </label>
+                            <input id="orgUnitsGroups">
+                        </div>
+                        <div disabled class="listDiv"><ul id="orgUnitsGroupsList"></ul></div>
+                        <div>
+                                <label for="dataElements">dataElements: </label>
+                                <input id="dataElements">
+                            </div>
+                            <div class="listDiv"><ul id="dataElementsList"></ul></div>
+                        <div>
+                        <label for="from">From</label>
+                        <input type="text" id="from" name="from">
+                        <label for="to">to</label>
+                        <input type="text" id="to" name="to">
+                        <button id="apply" >Look For Data!</button>
+                        <div class="listDiv"><ul id="dataValuesList"></ul></div>
+                        <button id="apply" >Delete this Data!</button>
+                        <div class="listDiv"><ul id="dataValuesDeletedList"></ul></div>
+                        
                 </div>
-
-                <div>
-                    <label for="extraParams">More params. Add &: </label>
-                    <input id="extraParams">
-                </div>
-
-                <button id="search" >Search!</button>
-                
-                
-                <fieldset>
-                    <legend>Add / Remove / Set </legend>
-                    <label for="addCheckbox">Add </label>
-                    <input disabled class="checkboxradio" type="radio" name="add" id="addCheckbox" >
-                    <label for="removeCheckbox">Remove </label>
-                    <input checked class="checkboxradio" type="radio" name="remove" id="removeCheckbox">
-                    <label for="setCheckbox">Set </label>
-                    <input disabled class="checkboxradio" type="radio" name="set" id="setCheckbox">
-                  </fieldset>
-                
-                <div class="listDiv"><ul id="eventList"></ul></div>
-
-                <button id="apply" >Apply!</button>
-            
-                
             </div>
         </div>
+        <div id="footer"> Swiss Knife App vbeta.2 29.11.2017 </div>
         
     </body>
 </html>
