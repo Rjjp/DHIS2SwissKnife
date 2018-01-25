@@ -3,9 +3,11 @@
  * This file contains function that controls the input of the user
  * 
  * @author Ramón José Jiménez Pomareta
- * @version 1
- * @date 19.01.2018
+ * @version 2
+ * @date 25.01.2018
  * @requires jQuery-UI
+ * 
+ * last changes autocompleteSearcher delay
  */
 
 var excelHeaders = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN", "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX", "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH"];
@@ -74,7 +76,7 @@ function nextLetter (key) {
   return key;
 };
 
-function autocompleteSearcher(elementId, dataSource, callbackFunction, minLength){
+function autocompleteSearcher(elementId, dataSource, callbackFunction, minLength, delay){
     $( "#"+elementId ).autocomplete({
         source: dataSource,
         select: function(event, ui) {
@@ -99,7 +101,7 @@ function autocompleteSearcher(elementId, dataSource, callbackFunction, minLength
             }
 
         },
-        delay: 500,
+        delay: delay,
         minLength: minLength
     });
 }

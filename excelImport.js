@@ -7,8 +7,11 @@
  * @date 19.01.2018
  * 
  * 
- * requires on main 
- *          function processSheet(array, sheetNo)
+ * @requires 
+ *  xlsx/0.11.3/xlsx.full.min.js
+ *              on main 
+ *          function processWorkbook(array)
+ *          function notReadyToProcessWorkbook()
  */       
 
 
@@ -27,7 +30,8 @@
             worker: './xlsxworker.js'
         };
         
-        
+        var readyToProcessWorkbook = false;
+
         var process_wb = (function() {
 
             
@@ -50,10 +54,16 @@
             };
         
             return function process_wb(wb) {
-                var output = to_array(wb);
-                for (var i = 0; i<output.length; i++){
-                    processSheet(output[i], i);
+                if (readyToProcessWorkbook){
+                    var output = to_array(wb);
+                    processWorkbook(output);
+                } else {
+                    notReadyToProcessWorkbook();
                 }
+
+               /* for (var i = 0; i<Object.keys(output).length; i++){
+                    processSheet(output[i], i);
+                }*/
 
             };
         })();
@@ -97,41 +107,42 @@
             };
         })();
         
-        
-        // prepares behaviour for dropping files
-        (function() {
-            $(".drop")
-     		.on("drop", function(e) {
-                e.preventDefault();
-                $(".drop").switchClass( "dropInverse", "drop");
-                if (e.currentTarget.id == "drop"){
-                    do_file(e.originalEvent.dataTransfer.files);
-                }/* else if (e.currentTarget.id == "drop6"){
-                    prepareFile("fileResources", e.originalEvent.dataTransfer.files[0], sendFile, associateNewFile, updateAvailableFiles);
-                }*/
+        function prepareExcelImport(){
+            // prepares behaviour for dropping files
+            (function() {
+                $(".drop")
+                .on("drop", function(e) {
+                    e.preventDefault();
+                    $(".drop").switchClass( "dropInverse", "drop");
+                    if (e.currentTarget.id == "drop"){
+                        do_file(e.originalEvent.dataTransfer.files);
+                    }/* else if (e.currentTarget.id == "drop6"){
+                        prepareFile("fileResources", e.originalEvent.dataTransfer.files[0], sendFile, associateNewFile, updateAvailableFiles);
+                    }*/
 
-            })
-            .on("dragenter", function (e) {
-                e.preventDefault();
-                $(".drop").switchClass( "drop", "dropInverse");
-                e.originalEvent.dataTransfer.dropEffect = 'copy';
-            })
-            .on("dragleave", function (e) {
-                $(".drop").switchClass( "dropInverse", "drop");
-            })            
-            .on('dragover',function(e){
-                  e.preventDefault();
-            });
-        })();
-        
-        // prepares behaviour for importing files
-        (function() {
-            var xlf = document.getElementById('import_end');
-            if(!xlf.addEventListener) return;
-            function handleFile(e) { 
-                do_file(e.target.files); 
-                $("#uploadFilesForm")[0].reset();
-            }
-            xlf.addEventListener('change', handleFile, false);
+                })
+                .on("dragenter", function (e) {
+                    e.preventDefault();
+                    $(".drop").switchClass( "drop", "dropInverse");
+                    e.originalEvent.dataTransfer.dropEffect = 'copy';
+                })
+                .on("dragleave", function (e) {
+                    $(".drop").switchClass( "dropInverse", "drop");
+                })            
+                .on('dragover',function(e){
+                    e.preventDefault();
+                });
+            })();
             
-        })();
+            // prepares behaviour for importing files
+            (function() {
+                var xlf = document.getElementById('import_end');
+                if(!xlf.addEventListener) return;
+                function handleFile(e) { 
+                    do_file(e.target.files); 
+                  //  $("#uploadFilesForm")[0].reset();
+                }
+                xlf.addEventListener('change', handleFile, false);
+                
+            })();
+        }

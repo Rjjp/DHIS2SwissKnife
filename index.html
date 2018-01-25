@@ -1,4 +1,4 @@
-<script src="libraries/jquery/2.2.3/jquery.js"></script>
+<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js" integrity="sha256-T0Vest3yCU7pafRw9r+settMBX6JkKN06dqBnpQ8d30=" crossorigin="anonymous"></script>
 <script type="text/javascript" src="../../../dhis-web-commons/javascripts/dhis2/dhis2.translate.js"></script>
 <script type="text/javascript" src="../../../dhis-web-commons/javascripts/dhis2/dhis2.menu.js"></script>
@@ -8,10 +8,12 @@
   <script src="https://maps.google.com/maps/api/js?sensor=false"></script>
   <script src="https://dhis2-cdn.org/v222/openlayers/OpenLayers.js"></script>
 <script type="text/javascript" src="https://dhis2-cdn.org/v226/plugin/map.js"></script>
-<script lang="javascript" src="tree.js"></script>
+<script lang="javascript" src="api.js"></script>
 <script lang="javascript" src="inputControl.js"></script>
 <script lang="javascript" src="libraries/xlsx/0.11.3/xlsx.full.min.js"></script>
 <script lang="javascript" src="excelImport.js"></script>
+<script lang="javascript" src="orgUnitImporter.js"></script>
+<script lang="javascript" src="feedbacks.js"></script>
 
 
 
@@ -20,15 +22,7 @@
     /****************************************************************************************************
  	 **********                      	       CONSTANTS            	              	       **********
 	 ****************************************************************************************************/
-	var BASE_URL = "../../..";
-	var API_URL = BASE_URL + "/api/";
-    var ORG_UNITS = "organisationUnits";
-    var EVENTS = "events";
-    var RESOURCES = "resources";
-    var ME = "me";
-    var SHARING = "sharing";
-    var USERS = "users";
-    
+
     var MODE_UPDATE = 0;
     var MODE_DELETE = 1;
     var MODE_SET = 2;
@@ -41,12 +35,7 @@
     var COUNTRY_NAME = "cn";
     var COUNTRY_CODE = "code";
 
-    
-    var FEEDBACK_START  = 0;
-    var FEEDBACK_OK_1  = 1;
-    var FEEDBACK_OK_2  = 2;
-    var FEEDBACK_CONTROLLED_ERROR  = 3;
-    var FEEDBACK_FATAL_ERROR  = 4;
+
 
     var FEEDBACK_OTHER = "Unknown status. Tell ramon this error Code :";
     var FEEDBACK_ALL_OK_MSG = "Shipment recorded.";
@@ -56,15 +45,6 @@
     var FEEDBACK_FILL_ALL_FIELDS = "Please, fill all fields.";
     var FEEDBACK_SELECT_VALID_COUNTRY = "Please, select a valid country.";
 
-    var LOGO_CLASS_SUCCESS = "fa fa-check";
-    var LOGO_CLASS_WARNING = "fa fa-warning";
-    var LOGO_CLASS_ERROR = "fa fa-times-circle";
-    var LOGO_CLASS_OTHER = "fa fa-info-circle";
-    
-    var COLOR_CLASS_SUCCESS = "isa_success";
-    var COLOR_CLASS_WARNING = "isa_warning";
-    var COLOR_CLASS_ERROR = "isa_error";
-    var COLOR_CLASS_OTHER = "isa_info";
     
     
     /****************************************************************************************************
@@ -84,241 +64,10 @@
     var targetCountry;
     var targetEndemicityLevel;
 
-
-    var feedbackMessageControl = FEEDBACK_START;
-
     var numberOfPhases = 4;
     var dataStoreUrl, tab;
     var dataStore = new Object();
     var dependenciesMetadata;
-
-
-	/****************************************************************************************************
- 	 **********                    	    FUNCTIONS CALLING THE API         	           	       **********
-	 ****************************************************************************************************/
-
-    function mergeButKeepFirst(priorityArray, secondArray){
-        
-        if (typeof secondArray !== 'undefined' && secondArray !==null){
-            for (var i=0;i<secondArray.length;i++){
-                var exists = false;
-                for (var j=0;j<priorityArray.length;j++){
-                    if (secondArray[i].id.localeCompare(priorityArray[j].id)==0){
-                        exists = true;
-                        j = priorityArray.length;
-                    }
-                }
-                if (!exists){
-                    priorityArray.push(secondArray[i]);
-                }
-            }
-        }
-        return priorityArray;
-    }
-
-    function updateSharingStatus(type, id, payload){
-        (function (_type, _id, _payload) {
-            $.when(getSharingStatus(_type, _id))
-            .done(function(answer){
-                _payload.object.userGroupAccesses = mergeButKeepFirst(_payload.object.userGroupAccesses, answer.userGroupAccesses);
-                _payload.object.userAccesses = mergeButKeepFirst(_payload.object.userAccesses, answer.userAccesses);
-                setSharingStatus(_type, _id, _payload);
-            });
-        })(type, id, payload);
-    }
-
-    function setSharingStatus(type, id, object){
-        var params = {
-			type: type,
-            id: id
-		}
-        var builtUrl = buildAPIUrl(SHARING, params);
-        console.log ("POST: "+builtUrl);
-        console.log (object);
-        return $.ajax({
-            url: builtUrl,
-            type: 'POST',
-            dataType: 'json',
-            //   processData: false,
-            contentType: 'application/json',
-            data: JSON.stringify(object)
-            
-        }).done(function(data) {
-            console.log("done");
-            console.log(data);
-            return data;
-        }).fail(function(data) {
-            console.log(data);
-            return data;
-        });
-    }
-
-    function getSharingStatus(type, id){
-        var params = {
-			type: type,
-            id: id
-		}
-        var builtUrl = buildAPIUrl(SHARING, params);
-        return $.ajax({
-            url: builtUrl,
-            type: 'GET'
-            
-        }).then(function(data) {
-            return data.object;
-        });
-    }
-
-    function getObjectWithDependencies(type,id){
-
-        var builtUrl = buildAPIUrl(type+"/"+id+"/metadata.json");
-
-        return $.ajax({
-            url: builtUrl,
-            type: 'GET'
-            
-        }).then(function(data) {
-            return data;
-        });
-    }
-    function updateByID(resource, id, payload, callback){
-        var builtUrl = buildAPIUrl(resource);
-        builtUrl += "/"+id;
-        $.ajax({
-            headers: { 
-                'Accept': 'application/json',
-                'Content-Type': 'application/json' 
-            },
-            url: builtUrl,
-            type: 'PUT',
-            dataType: 'json',            
-            data: payload
-            
-        }).then(function(data) {
-            callback(data);
-        });
-    }
-
-    function deleteEvent(id, callback){
-        var builtUrl = buildAPIUrl(EVENTS);
-        builtUrl += "/"+id;
-        return $.ajax({
-            url: builtUrl,
-            type: 'DELETE'
-            
-        }).then(function(data) {
-            callback();
-            return data;
-        });
-    }
-
-    function getEventsByProgram(program, orgUnit, extraParams){
-        var params = {
-			program: program,
-            orgUnit: orgUnit,
-            skipPaging : true
-		}
-        
-        var builtUrl = buildAPIUrl(EVENTS, params);
-        builtUrl += extraParams;
-        return $.ajax({
-            url: builtUrl,
-            type: 'GET'
-            
-        }).then(function(data) {
-            return data;
-        });
-
-    }    
-    
-    function getByID(resource, id){
-
-      
-        var builtUrl = buildAPIUrl(resource);
-        builtUrl += "/"+id;
-        return $.ajax({
-            url: builtUrl,
-            type: 'GET'
-            
-        }).then(function(data) {
-            return data;
-        });
-    }
-
-
-    function get(resource, fields){
-
-        var params = {
-			fields: fields,
-            paging: "false"
-		}
-        var builtUrl = buildAPIUrl(resource, params);
-
-        return $.ajax({
-            url: builtUrl,
-            type: 'GET'
-            
-        }).then(function(data) {
-            return data;
-        });
-    }
-
-
-
-    
-
-    //http://who-dev.essi.upc.edu:8081/api/organisationUnits/oofyLUJJ6Vy?level=1&fields=id,displayName,parent&paging=false
-	function getAndBuildOrgUnitTree(tree, id, level, maxLevel, fields){
-
-        if (level<=maxLevel){
-            var params = {
-                level : level,
-                fields: fields,
-                paging: "false"
-            }
-            var builtUrl = buildAPIUrl("organisationUnits/"+id, params);
-
-            
-            return $.ajax({
-                url: builtUrl,
-                
-            }).then(function(data) {
-
-                for (var i=0; i<data.organisationUnits.length; i++){
-                    tree.add(data.organisationUnits[i].id, data.organisationUnits[i].displayName, data.organisationUnits[i].parent.id, tree.traverseBF);
-                }
-                
-                return getAndBuildOrgUnitTree(tree, id, level+1, maxLevel, fields);
-                
-            });
-        } else {
-            return tree;
-        }
-		
-    }
-
-    function updateUser(userId, details, roles, dcmOU, doaOU, userGroups, restrictions, mode, callback) {
-        $.when(getByID(USERS, userId))
-        .done(function(userRes){
-            if (mode == MODE_UPDATE){
-
-                userRes.organisationUnits = userRes.organisationUnits.concat(dcmOU);
-                userRes.dataViewOrganisationUnits = userRes.dataViewOrganisationUnits.concat(doaOU);
-                userRes.userGroups = userRes.userGroups.concat(userGroups);
-                userRes.userCredentials.userRoles = userRes.userCredentials.userRoles.concat(roles);
-
-            } else if (mode == MODE_SET) {
-                userRes.organisationUnits = dcmOU;
-                userRes.dataViewOrganisationUnits = doaOU;
-                userRes.userGroups = userGroups;
-                userRes.userCredentials.userRoles = roles;
-            } else if (mode == MODE_DELETE){
-
-            }
-
-            updateByID(USERS, userId, JSON.stringify(userRes), callback);
-        
-        });
-    }
 
 
 
@@ -408,13 +157,7 @@
         dataByOrgUnit[TOTAL][TOTAL] = -2; // It will be placed last one at right on sorting
     }
 
-	function buildAPIUrl(page, params){
-        if(params!== null && params !=undefined){
-		    return API_URL+page+"?"+$.param(params, true);
-        } else {
-		    return API_URL+page;
-        }
-	}
+
 
 	function getCurrentDate(){
 		var d = new Date();
@@ -431,42 +174,6 @@
     }
 
 
-    function printFeedback (){
-        var message;
-        var logo_class;
-        var color_class;
-        switch(feedbackMessageControl){
-            case FEEDBACK_OK_2:
-                message = FEEDBACK_ALL_OK_MSG;
-                logo_class = "fa fa-check";
-                color_class = "isa_success";
-                break;
-            case FEEDBACK_CONTROLLED_ERROR:
-                message = FEEDBACK_CONTROLLED_ERROR_MSG;
-                logo_class = "fa fa-warning";
-                color_class = "isa_warning";
-                break;
-            case FEEDBACK_FATAL_ERROR:
-                message = FEEDBACK_FATAL_ERROR_MSG;
-                logo_class = "fa fa-times-circle";
-                color_class = "isa_error";
-                break;
-            default:
-                message = FEEDBACK_OTHER;
-                logo_class = "fa fa-info-circle";
-                color_class = "isa_info";
-        }
-
-        updateFeedback(message, color_class, logo_class);
-    }
-
-    function updateFeedback(message, color_class, logo_class){
-        $("#feedbackMessageColor").removeClass();
-        $("#feedbackMessageColor").addClass(color_class);
-        $("#feedbackMessageIcon").removeClass();
-        $("#feedbackMessageIcon").addClass(logo_class);
-        $("#feedbackMessage").html(message);
-    }
     
     window.dhis2 = window.dhis2 || {};
     dhis2.settings = dhis2.settings || {};
@@ -575,10 +282,9 @@
 
     } 
 
-
-    function processSheet(array, sheetNo){
-        console.log("Sheet no " + sheetNo + " first element :");
-        console.log(array[0]);
+   
+    function notReadyToProcessWorkbook(){
+        updateFeedback(FEEDBACK_INFO, "feedbackOUCreator", FEEDBACK_FILL_ALL_FIELDS);
     }
 
     $(document).ready(function(){
@@ -598,7 +304,7 @@
             updateFeedback("", "", "");
         });
 
-
+        prepareExcelImport();
         
         $.when(
             get("programs", "id,name")
@@ -608,8 +314,8 @@
             
             
             $("#eventList").empty();
-            autocompleteSearcher("program", programs, onClickProgram, 1);
-            autocompleteSearcher("orgUnit", orgUnitsDataSourceFunction, onClickOU_DCM, 3);
+            autocompleteSearcher("program", programs, onClickProgram, 1, 300);
+            autocompleteSearcher("orgUnit", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
 
 
         });
@@ -681,18 +387,55 @@
 
 
         /* OrgUnit Creator */
-        autocompleteSearcher("firstColumn", excelHeaders, doNothing, 0);
-        autocompleteSearcher("lastColumn", excelHeaders, doNothing, 0);
-        autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
-        autocompleteSearcher("firstRow", generateNumbers(1,100,ASC), doNothing, 0);
+        autocompleteSearcher("firstColumn", excelHeaders, doNothing, 0, 0);
+        autocompleteSearcher("lastColumn", excelHeaders, doNothing, 0, 0);
+        autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0, 50);
+        autocompleteSearcher("firstRow", generateNumbers(1,100,ASC), doNothing, 0, 50);
 
         $( "#firstColumn" ).change(function() {
-            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
+            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0, 0);
         });
         $( "#lastColumn" ).change(function() {
-            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0);
+            autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0, 0);
         });
 
+
+        var failsBeforeShowMessage = 2;
+        var timer, delay = 200;
+        $("#refColumn, #firstRow").change(function() {
+            var _this = $(this);
+            clearTimeout(timer);
+            // I need a timer, since the refColumn is checked by another change event
+            timer = setTimeout(function() {
+                
+
+                if ($("#refColumn").val().length > 0 && $("#firstRow").val().length > 0) {
+                    readyToProcessWorkbook = true;
+                    updateFeedback(FEEDBACK_SUCCESS, "feedbackOUCreator", "Ready for upload");
+                    setValuesOfOUImporterFields();
+                    
+                } else {
+                    failsBeforeShowMessage--;
+                    readyToProcessWorkbook = false;
+                    
+                    if (failsBeforeShowMessage <= 0){
+                        updateFeedback(FEEDBACK_INFO, "feedbackOUCreator", FEEDBACK_FILL_ALL_FIELDS);
+                    }
+                }
+                
+           }, delay );
+
+        });
+
+        // For testing 
+
+        $("#firstColumn").val("B");
+        $("#lastColumn").val("F");
+        $("#firstRow").val(5);
+        $("#refColumn").val("B");
+        $("#firstRow").trigger("change");
+        $("#refColumn").trigger("change");
+        
 /*
         // Datepicker
         var dateFormat = "mm/dd/yy",
@@ -748,7 +491,8 @@ function toLog(text){
 		<link type="text/css" rel="stylesheet" media="screen" href="../../../dhis-web-commons/css/menu.css"> 
 		<link type="text/css" rel="stylesheet" media="screen" href="../../../dhis-web-commons/css/light_blue/light_blue.css?_rev=22006" />
         <link rel="stylesheet" href="https://dhis2-cdn.org/v222/ext/resources/css/ext-plugin-gray.css" type="text/css" />
-
+        <link rel="stylesheet" href="feedbacks.css">
+        
     </head>
 	<body>
         <div id="header" >
@@ -853,6 +597,10 @@ function toLog(text){
                             <td></td> 
                         </tr>
                     </table>
+                    <div id="feedbackOUCreator" class="">
+                        <i class="fa "></i>
+                        <div></div>
+                    </div>                
                     <div id="drop" class="drop">Drop the spreadsheet file here </div>     
                     <form id="importFilesForm">                     
                         <input type="file" name="xlfile" id="import_end" accept=".xls,.xlsx" class="inputFile ui-button ui-widget ui-corner-all">or select it here</input>
