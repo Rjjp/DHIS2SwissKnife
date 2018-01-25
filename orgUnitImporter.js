@@ -27,7 +27,11 @@ function getNewID(){
     } else {
         return $.when( generateNewsIDS())
         .done(function(returnData){
-            return getNewID();
+
+            return $.when( getNewID())
+            .done(function(returnData){
+                return;
+            });
         });
     }
 }
