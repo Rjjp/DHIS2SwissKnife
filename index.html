@@ -204,6 +204,12 @@
 
     }
 
+    function  addOrgUnit(item){
+        var html = '&emsp;<span class="remove">&#x2718;</span>';
+        $("#orgUnitListDel").append("<li value="+item.value+">"+item.label+html+"</li>");
+
+    }
+
     function  onClickOU_DCM(item){
         
         console.log("OU clicked" );
@@ -316,7 +322,9 @@
             $("#eventList").empty();
             autocompleteSearcher("program", programs, onClickProgram, 1, 300);
             autocompleteSearcher("orgUnit", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
-
+            // TODO fill once
+            autocompleteSearcher("orgUnitDel", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
+            
 
         });
 
@@ -335,7 +343,8 @@
             var orgUnit = $("#orgUnit").text();
             var program = $("#program").text();
             var extraParams = $("#extraParams").val();
-            
+            $("#eventList").empty();
+
             $.when(
                 getEventsByProgram(program, orgUnit, extraParams)
             )
@@ -378,6 +387,8 @@
                     deleteEvent(id);
                     
                 });
+                $("#eventList").empty();
+
             } else {
                
             }
@@ -385,6 +396,40 @@
 
         });
 
+
+        $( "#searchDel" ).click( function( event ) {
+            var orgUnit = $("#orgUnitDel").text();
+            var extraParams = $("#extraParamsDel").val();
+            $("#orgUnitListDel").empty();
+            $.when(
+                getv2(ORG_UNITS+"/"+orgUnit + "?fields=id,name,code&" + extraParams)
+            )
+            .done(function(orgUnitRes){
+                //fill(programs, programsRes.programs, ["value", "label"], ["id", "displayName"], true);
+                
+                for (var i = 0; i<orgUnitRes.organisationUnits.length; i++){
+                    var item = new Object();
+                    var e = orgUnitRes.organisationUnits[i];
+                    item.value = e.id;
+                    item.label = e.name + ' - ' + e.code;
+
+                    addOrgUnit(item);
+                }
+            });
+            
+            
+        });
+
+        $( "#applyDel" ).click( function( event ) {
+            event.preventDefault();
+
+            $( "#orgUnitListDel li" ).each(function( index ) {
+                var id = $( this ).attr("value");
+                deleteOrgUnit(id);
+            });
+            $("#orgUnitListDel").empty();
+
+        });
 
         /* OrgUnit Creator */
         autocompleteSearcher("firstColumn", excelHeaders, doNothing, 0, 0);
@@ -429,10 +474,12 @@
 
         // For testing 
 
-        $("#firstColumn").val("B");
-        $("#lastColumn").val("F");
+        $("#firstColumn").val("C");
+        $("#lastColumn").val("E");
         $("#firstRow").val(5);
-        $("#refColumn").val("B");
+        $("#refColumn").val("C");
+        $("#longitudeColumn").val("I");
+        $("#latitudeColumn").val("H");
         $("#firstRow").trigger("change");
         $("#refColumn").trigger("change");
         
@@ -513,6 +560,7 @@ function toLog(text){
                     <li><a href="#tabs-1">1. Program data</a></li>
                     <li><a href="#tabs-2">2. Aggregated data</a></li>
                     <li><a href="#tabs-3">3. OrgUnits Creator</a></li>
+                    <li><a href="#tabs-4">4. OrgUnits Remove</a></li>
                 </ul>
                 <div id="tabs-1">	
                     <div>
@@ -596,6 +644,16 @@ function toLog(text){
                             <td><input id="refColumn" class="input_small"></td> 
                             <td></td> 
                         </tr>
+                        <tr>
+                            <td>longitude (optional)</td>
+                            <td><input id="longitudeColumn" class="input_small"></td> 
+                            <td></td> 
+                        </tr>
+                        <tr>
+                            <td>latitude (optional)</td>
+                            <td><input id="latitudeColumn" class="input_small"></td> 
+                            <td></td> 
+                        </tr>
                     </table>
                     <div id="feedbackOUCreator" class="">
                         <i class="fa "></i>
@@ -606,9 +664,27 @@ function toLog(text){
                         <input type="file" name="xlfile" id="import_end" accept=".xls,.xlsx" class="inputFile ui-button ui-widget ui-corner-all">or select it here</input>
                     </form>   
                 </div>
+                <div id="tabs-4">	
+                    
+                    <div>
+                        <label for="orgUnitDel">OrgUnit: </label>
+                        <input id="orgUnitDel">
+                    </div>
+
+                    <div>
+                        <label for="extraParamsDel">More params. </label>
+                        <input id="extraParamsDel">
+                    </div>
+
+                    <button id="searchDel" >Search!</button>
+
+                    <div class="listDiv"><ul id="orgUnitListDel"></ul></div>
+
+                    <button id="applyDel" >Apply!</button>
+                </div>
             </div>
         </div>
-        <div id="footer"> Swiss Knife App vbeta.3 19.01.2018 </div>
+        <div id="footer"> Swiss Knife App vbeta.6 26.01.2018 </div>
         
     </body>
 </html>

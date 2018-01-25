@@ -4,7 +4,7 @@ var currentColumn;
 var excelHeaders = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN", "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX", "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH"];
 
 var OUTemplate;
-var firstColumn, lastColumn, firstRow, refColumn;
+var firstColumn, lastColumn, firstRow, refColumn, latitudeColumn, longitudeColumn;
 
 var poolOfIds = [];
 var nextQuantityOfIDS = 0;
@@ -17,6 +17,7 @@ function generateNewsIDS(){
     .done(function(returnData){
         nextQuantityOfIDS = 10;
         poolOfIds = poolOfIds.concat(returnData.codes);
+        return poolOfIds;
     });
 }
 
@@ -26,13 +27,12 @@ function getNewID(){
         return poolOfIds.pop();
     } else {
         return $.when( generateNewsIDS())
-        .done(function(returnData){
-
+       .done(function(returnData){
             return $.when( getNewID())
             .done(function(returnData){
-                return;
+                return returnData;
             });
-        });
+       });
     }
 }
 
@@ -62,6 +62,8 @@ function setValuesOfOUImporterFields(){
     lastColumn = $("#lastColumn").val();
     firstRow = $("#firstRow").val();
     refColumn = $("#refColumn").val();
+    longitudeColumn= $("#longitudeColumn").val();
+    latitudeColumn = $("#latitudeColumn").val();
 }
 
 
@@ -109,7 +111,7 @@ function precisionRound(number, precision) {
 function processSheet(array, sheetNo){
     console.log(" --- *** --- processSheet " + sheetNo + " --- *** ---");
     parentUIDs = [];
-    nextQuantityOfIDS = precisionRound(lastRowForColumn(array, lastColumn) * 1.5, 0);
+    nextQuantityOfIDS = precisionRound(lastRowForColumn(array, lastColumn) * 2, 0);
     generateNewsIDS();
     // It adds 1 at the beggining
     return processNextRow(array, firstRow-1);
@@ -120,7 +122,7 @@ function processNextRow(array, row){
     row++;
     console.log("processNextRow row" + row );
     
-    if(getCellData(array, refColumn+row) != null){
+    if(getCellData(array, refColumn+row) != ""){
        /* return $.when(
             getReferencesUID()
             )
@@ -178,28 +180,55 @@ function getParentFromPreviousRow(array, colNo, row){
     
 }
 
+function sleep(milliseconds) {
+    var start = new Date().getTime();
+    for (var i = 0; i < 1e7; i++) {
+      if ((new Date().getTime() - start) > milliseconds){
+        break;
+      }
+    }
+    console.log("work... done!")
+    return start;
+  }
+  //return sleep(1000);
+
+
 function addOU(array, getParentFunction, colNo, row){
     console.log("addOU "+thisLetter(colNo)+row);
+    
+    
     return $.when( getParentFunction(array, colNo, row))
-        .done(function(returnData){
-            parentUIDs[colNo - 1] = returnData.id;
-            return $.when(getNewID())
             .done(function(returnData){
-                OUTemplate.id= returnData; 
-                OUTemplate.name= getCellData(array, thisLetter(colNo) + row);
-                OUTemplate.shortName= OUTemplate.name;
-                OUTemplate.parent= new Object();
-                OUTemplate.parent.id = parentUIDs[colNo-1];
-                OUTemplate.openingDate="1932-01-28T23:00:00.000";
-                parentUIDs[colNo] = OUTemplate.id;
-                console.log("add OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo-1]);
-                console.log(OUTemplate);
-                return $.when(createNewElement(ORG_UNITS, OUTemplate))
+                parentUIDs[colNo - 1] = returnData.id;
+                return $.when(getNewID())
                 .done(function(returnData){
-                    return returnData;
+                    if (typeof returnData === 'string') {
+                        OUTemplate.id= returnData; 
+                    } else {
+                        OUTemplate.id= returnData.codes[0];
+                    }
+                    OUTemplate.name= toTitleCase(getCellData(array, thisLetter(colNo) + row));
+                    OUTemplate.shortName= OUTemplate.name;
+                    OUTemplate.parent.id = parentUIDs[colNo-1];
+                    OUTemplate.coordinates = "";
+                    if(lastColumnNo == colNo) {
+                        lat = getCellData(array, latitudeColumn + row);
+                        long = getCellData(array, longitudeColumn + row);
+                        if( lat.length != 0 && long.length != 0){
+                            OUTemplate.coordinates = "["+long+","+lat+"]";
+                        }
+                    }
+
+                    parentUIDs[colNo] = OUTemplate.id;
+                    console.log("add OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo-1]);
+                    console.log(OUTemplate);
+               
+                    return createNewElement(ORG_UNITS, OUTemplate);
+                    
                 });
+
             });
-        });
+
 }
 
 function thisLetter(colNo){
@@ -235,17 +264,25 @@ function addOU_InRow(array, colNo, row) {
     } else if (parentIsRef(colNo)){
         console.log("addOU_InRow parentIsRef "+colNo+row);
         
-        return addOU(array, getParentFromRef, colNo, row);
+        return  $.when(addOU(array, getParentFromRef, colNo, row))
+            .done(function(returnData){
+                return returnData;
+            });
     } else {
         console.log("addOU_InRow else "+colNo+row);
         
         return $.when( addOU_InRow(array, colNo - 1, row))
         .done(function(returnData){
-            addOU(array, getParentFromPreviousRow, colNo, row);
+            console.log("finish addOU_InRow  "+colNo+row);
+            console.log(returnData);
         })
         .fail(function(returnError){
                 console.log("Error inside addOU_InRow");
                 console.log(returnError);
+        })
+        .then(function(returnData){
+            return addOU(array, getParentFromPreviousRow, colNo, row);
+           
         });
     }
 }
@@ -277,7 +314,7 @@ function getCellData( array, address )
     }
     catch(ex)
     {
-        val = null;
+        val = "";
     }
 
     return(val);
@@ -313,6 +350,11 @@ function lastRowForColumn(data, column){
 	return Math.max.apply(null,valuesArray);
 }
 
+
+function toTitleCase(str)
+{
+    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+}
 /*
 
  $.when(

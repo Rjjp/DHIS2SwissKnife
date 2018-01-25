@@ -191,6 +191,20 @@ var USERS = "users";
         });
     }
 
+    function getv2(resource, params){
+        
+
+        var builtUrl = buildAPIUrl(resource, params);
+
+        return $.ajax({
+            url: builtUrl,
+            type: 'GET'
+            
+        }).then(function(data) {
+            return data;
+        });
+    }
+
     function getArrayOfIDs(quantity){
 
         var builtUrl = buildAPIUrl("system/id?limit="+quantity);
@@ -204,6 +218,19 @@ var USERS = "users";
         });
     }
 
+  
+    function deleteOrgUnit(id){
+        var builtUrl = buildAPIUrl(ORG_UNITS);
+        builtUrl += "/"+id;
+        return $.ajax({
+            url: builtUrl,
+            type: 'DELETE'
+            
+        }).then(function(data) {
+            return data;
+        });
+    }
+
     function createNewElement(endpoint, object) {
 
         var builtUrl = buildAPIUrl(endpoint);
@@ -211,6 +238,7 @@ var USERS = "users";
         console.log (object);
         return $.ajax({
             url: builtUrl,
+            async: false,
             type: 'POST',
             dataType: 'json',
             //   processData: false,
@@ -219,10 +247,10 @@ var USERS = "users";
             
         }).done(function(data) {
             console.log("createNewElement OK");
-            return data;
         }).fail(function(data) {
             console.log("createNewElement ERROR");
             console.log(data);
+        }).then(function(data) {
             return data;
         });
     }
