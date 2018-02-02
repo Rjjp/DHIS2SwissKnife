@@ -324,7 +324,7 @@
             autocompleteSearcher("orgUnit", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
             // TODO fill once
             autocompleteSearcher("orgUnitDel", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
-            
+
 
         });
 
@@ -436,7 +436,8 @@
         autocompleteSearcher("lastColumn", excelHeaders, doNothing, 0, 0);
         autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0, 50);
         autocompleteSearcher("firstRow", generateNumbers(1,100,ASC), doNothing, 0, 50);
-
+        autocompleteSearcher("numberOfMetadata", generateNumbers(1,20,ASC), doNothing, 0, 50);
+        
         $( "#firstColumn" ).change(function() {
             autocompleteSearcher("refColumn", getArrayOfLetters($("#firstColumn").val(), $("#lastColumn").val()), doNothing, 0, 0);
         });
@@ -474,15 +475,17 @@
 
         // For testing 
 
-        $("#firstColumn").val("C");
-        $("#lastColumn").val("E");
-        $("#firstRow").val(5);
-        $("#refColumn").val("C");
-        $("#longitudeColumn").val("I");
-        $("#latitudeColumn").val("H");
+        $("#firstColumn").val("A");
+        $("#lastColumn").val("I");
+        $("#firstRow").val(2);
+        $("#refColumn").val("A");
+        $("#numberOfMetadata").val(4);
+        $("#longitudeColumn").val("");
+        $("#latitudeColumn").val("");
         $("#firstRow").trigger("change");
         $("#refColumn").trigger("change");
-        
+        $("#numberOfMetadata").trigger("change");
+
 /*
         // Datepicker
         var dateFormat = "mm/dd/yy",
@@ -632,7 +635,7 @@ function toLog(text){
                             <td><input id="firstColumn" class="input_small"></td> 
                         </tr>
                         <tr>
-                            <td>Last colum</td>
+                            <td>Last ID colum</td>
                             <td><input id="lastColumn" class="input_small"></td> 
                         </tr>
                         <tr>
@@ -640,9 +643,13 @@ function toLog(text){
                             <td><input id="firstRow" class="input_small"></td> 
                         </tr>
                         <tr>
-                            <td>Col reference</td>
+                            <td>ID Col reference</td>
                             <td><input id="refColumn" class="input_small"></td> 
                             <td></td> 
+                        </tr>
+                        <tr>
+                            <td>Columns per OrgUnit</td>
+                            <td><input id="numberOfMetadata" class="input_small"></td> 
                         </tr>
                         <tr>
                             <td>longitude (optional)</td>
@@ -684,7 +691,7 @@ function toLog(text){
                 </div>
             </div>
         </div>
-        <div id="footer"> Swiss Knife App vbeta.6 26.01.2018 </div>
+        <div id="footer"> Swiss Knife App vbeta.8 01.02.2018 </div>
         
     </body>
 </html>

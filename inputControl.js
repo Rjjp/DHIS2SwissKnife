@@ -42,6 +42,22 @@ function generateNumbers(from, to, asc){
     return numbers;
 }
 
+/*
+Returns the position of the letter.
+Attention ! Max supported : last letter on excelHeaders
+*/
+function letterNo(letter){
+    if (letter.length == 1) {
+        return letter.charCodeAt(0) - 65;
+    } else {
+        var pos = "Z".charCodeAt(0) - 65 + 1;
+        while (pos <= excelHeaders.length && letter.toLowerCase().localeCompare(excelHeaders[pos].toLowerCase()) != 0 ){
+            pos++;
+        } 
+        return pos;
+    }
+}
+
 function distanceBetween(letter1, letter2){
 	var count = 0;
 
@@ -105,6 +121,8 @@ function autocompleteSearcher(elementId, dataSource, callbackFunction, minLength
         minLength: minLength
     });
 }
+
+
 
 
     // Modifies the autocomplete filter in order to match also other fields than label

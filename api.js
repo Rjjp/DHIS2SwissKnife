@@ -20,9 +20,12 @@ var RESOURCES = "resources";
 var ME = "me";
 var SHARING = "sharing";
 var USERS = "users";
+var parameters = "?preheatMode=REFERENCE&importReportMode=DEBUG"
 
+var POST = "POST";
+var PATCH = "PATCH";
+var PUT = "PUT";
 
-    
     /****************************************************************************************************
  	 **********                    	    FUNCTIONS CALLING THE API         	           	       **********
 	 ****************************************************************************************************/
@@ -231,24 +234,24 @@ var USERS = "users";
         });
     }
 
-    function createNewElement(endpoint, object) {
+    function sendObjectTo(endpoint, object, mode) {
 
         var builtUrl = buildAPIUrl(endpoint);
-        console.log ("POST: "+builtUrl);
+        console.log (mode + ": "+builtUrl);
         console.log (object);
         return $.ajax({
             url: builtUrl,
             async: false,
-            type: 'POST',
+            type: mode,
             dataType: 'json',
             //   processData: false,
             contentType: 'application/json',
             data: JSON.stringify(object)
             
         }).done(function(data) {
-            console.log("createNewElement OK");
+            console.log(mode + " OK");
         }).fail(function(data) {
-            console.log("createNewElement ERROR");
+            console.log(mode + " ERROR");
             console.log(data);
         }).then(function(data) {
             return data;

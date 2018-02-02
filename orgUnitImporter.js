@@ -4,10 +4,11 @@ var currentColumn;
 var excelHeaders = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN", "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX", "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF", "BG", "BH"];
 
 var OUTemplate;
-var firstColumn, lastColumn, firstRow, refColumn, latitudeColumn, longitudeColumn;
+var firstColumn, lastColumn, firstRow, refColumn, latitudeColumn, longitudeColumn, numberOfMetadata;
 
 var poolOfIds = [];
 var nextQuantityOfIDS = 0;
+var metadata = [];
 
 
 function generateNewsIDS(){
@@ -61,6 +62,7 @@ function setValuesOfOUImporterFields(){
     firstColumn = $("#firstColumn").val();
     lastColumn = $("#lastColumn").val();
     firstRow = $("#firstRow").val();
+    numberOfMetadata = $("#numberOfMetadata").val();
     refColumn = $("#refColumn").val();
     longitudeColumn= $("#longitudeColumn").val();
     latitudeColumn = $("#latitudeColumn").val();
@@ -76,17 +78,29 @@ function prepareForProcessingNextSheet(workbook, counter, length){
      }
 }
 
+// gets the metadta name of the first row in the first sheet
+function fillMetadata(workbook){
+    for (var i = 0; i < numberOfMetadata; i++){
+        metadata.push(getCellData(workbook[0], excelHeaders[i]+"1"));
+    }
+}
+
+function resetOUTemplate(){
+    OUTemplate = new Object();
+    OUTemplate.id=""; 
+    //OUTemplate.name="";
+    //OUTemplate.shortName="";
+    OUTemplate.parent= new Object();
+    OUTemplate.parent.id ="";
+   // OUTemplate.openingDate="1932-01-28T23:00:00.000";
+}
+
 function processWorkbook(workbook){
     console.log("Workbook processing");
     parentUIDs = [];
-    OUTemplate = new Object();
-    OUTemplate.id=""; 
-    OUTemplate.name="";
-    OUTemplate.shortName="";
-    OUTemplate.parent= new Object();
-    OUTemplate.parent.id ="";
-    OUTemplate.openingDate="1932-01-28T23:00:00.000";
+    resetOUTemplate();
 
+    fillMetadata(workbook);
 
     setFirstAndLastColumnNumbers(firstColumn, lastColumn);
 
@@ -153,12 +167,12 @@ function processNextRow(array, row){
 }
 
 function parentEqualPrevious(array, colNo, row){
-    return getCellData(array, previousLetter(colNo)+row).localeCompare(getCellData(array, previousLetter(colNo)+(row-1))) == 0 ;
+    return getCellData(array, thisLetter(colNo-numberOfMetadata)+row).localeCompare(getCellData(array, thisLetter(colNo-numberOfMetadata)+(row-1))) == 0 ;
 }
 
 function getParentFromRef(array, colNo, row){
-    console.log("getParentFromRef parent is"+thisLetter(colNo-1)+row);
-    var id = getCellData(array, thisLetter(colNo-1)+row);
+    console.log("getParentFromRef parent is"+thisLetter(colNo-numberOfMetadata)+row);
+    var id = getCellData(array, thisLetter(colNo-numberOfMetadata)+row);
     return getByID(ORG_UNITS, id);
 }
 
@@ -166,11 +180,11 @@ function getParentFromRef(array, colNo, row){
 function getParentFromPreviousRow(array, colNo, row){
     console.log("getParentFromPreviousRow "+thisLetter(colNo)+row);
     
-    if (colNo > 0){
+    if (colNo > numberOfMetadata - 1){
         var returnObject = new Object();
         console.log("Getting parent From Previous Row below 0. Getting from array.")
-        console.log(parentUIDs[colNo-1]);
-        returnObject.id = parentUIDs[colNo-1];
+        console.log(parentUIDs[colNo - numberOfMetadata]);
+        returnObject.id = parentUIDs[colNo - numberOfMetadata];
         return returnObject;
     } else {
         console.log("Getting parent From Previous Row below 0. Getting from ref.")
@@ -199,34 +213,59 @@ function addOU(array, getParentFunction, colNo, row){
     
     return $.when( getParentFunction(array, colNo, row))
             .done(function(returnData){
-                parentUIDs[colNo - 1] = returnData.id;
-                return $.when(getNewID())
-                .done(function(returnData){
-                    if (typeof returnData === 'string') {
-                        OUTemplate.id= returnData; 
-                    } else {
-                        OUTemplate.id= returnData.codes[0];
+                parentUIDs[colNo - numberOfMetadata] = returnData.id;
+                
+                resetOUTemplate();
+                OUTemplate.id = getCellData(array, thisLetter(colNo) + row);
+                parentUIDs[colNo] = OUTemplate.id;
+                
+                OUTemplate.parent.id = parentUIDs[colNo - numberOfMetadata];
+                                        
+                if(lastColumnNo == colNo) {
+                    lat = getCellData(array, latitudeColumn + row);
+                    long = getCellData(array, longitudeColumn + row);
+                    if( lat.length != 0 && long.length != 0){
+                        OUTemplate.coordinates = "["+long+","+lat+"]";
                     }
-                    OUTemplate.name= toTitleCase(getCellData(array, thisLetter(colNo) + row));
-                    OUTemplate.shortName= OUTemplate.name;
-                    OUTemplate.parent.id = parentUIDs[colNo-1];
-                    OUTemplate.coordinates = "";
-                    if(lastColumnNo == colNo) {
-                        lat = getCellData(array, latitudeColumn + row);
-                        long = getCellData(array, longitudeColumn + row);
-                        if( lat.length != 0 && long.length != 0){
-                            OUTemplate.coordinates = "["+long+","+lat+"]";
+                }
+                
+                if (OUTemplate.id.length != 0){
+                    //Patch then
+                    var tempData;
+                    for (var i = 1; i<metadata.length; i++ ){
+                        tempData =  getCellData(array, thisLetter(colNo+i) + row);
+                        if (tempData.length != 0){
+                            OUTemplate[metadata[i]] = getCellData(array, thisLetter(colNo+i) + row);                            
                         }
                     }
-
-                    parentUIDs[colNo] = OUTemplate.id;
-                    console.log("add OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo-1]);
+                    console.log("Patch OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo - numberOfMetadata]);
                     console.log(OUTemplate);
-               
-                    return createNewElement(ORG_UNITS, OUTemplate);
+                    return sendObjectTo(ORG_UNITS+parameters, OUTemplate, PATCH);
                     
-                });
+                } else {
+                    //create
 
+                    return $.when(getNewID())
+                    .done(function(returnData){
+                        if (typeof returnData === 'string') {
+                            OUTemplate.id= returnData; 
+                        } else {
+                            OUTemplate.id= returnData.codes[0];
+                        }
+
+                        for (var i = 1; i<metadata.length; i++ ){
+                            OUTemplate[metadata[i]] = getCellData(array, thisLetter(colNo+i) + row);
+                        }
+                        OUTemplate.openingDate="1932-01-28T23:00:00.000";
+
+                        console.log("add OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo - numberOfMetadata]);
+                        console.log(OUTemplate);
+                        //return;
+                        return sendObjectTo(ORG_UNITS+parameters, OUTemplate, POST);
+                        
+                    });
+
+                }
             });
 
 }
@@ -250,7 +289,10 @@ function previousLetter(colNo){
 }
 
 function parentIsRef(colNo){
-    return previousLetter(colNo).localeCompare(refColumn) == 0;
+    // ((colNo / numberOfMetadata) >> 0) * numberOfMetadata; // gets the colNo of the id of its group
+    return (((colNo / numberOfMetadata) >> 0) - 1) * numberOfMetadata == letterNo(refColumn);
+    //return colNo
+    //return previousLetter(colNo).localeCompare(refColumn) < 0;
 }
 
 
@@ -271,7 +313,7 @@ function addOU_InRow(array, colNo, row) {
     } else {
         console.log("addOU_InRow else "+colNo+row);
         
-        return $.when( addOU_InRow(array, colNo - 1, row))
+        return $.when( addOU_InRow(array, colNo - numberOfMetadata, row))
         .done(function(returnData){
             console.log("finish addOU_InRow  "+colNo+row);
             console.log(returnData);
