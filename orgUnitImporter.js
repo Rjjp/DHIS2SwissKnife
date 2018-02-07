@@ -217,9 +217,7 @@ function addOU(array, getParentFunction, colNo, row){
                 
                 resetOUTemplate();
                 OUTemplate.id = getCellData(array, thisLetter(colNo) + row);
-                parentUIDs[colNo] = OUTemplate.id;
                 
-                OUTemplate.parent.id = parentUIDs[colNo - numberOfMetadata];
                                         
                 if(lastColumnNo == colNo) {
                     lat = getCellData(array, latitudeColumn + row);
@@ -230,7 +228,11 @@ function addOU(array, getParentFunction, colNo, row){
                 }
                 
                 if (OUTemplate.id.length != 0){
-                    //Patch then
+                    //  ID fournished, so patch it
+
+                    parentUIDs[colNo] = OUTemplate.id;
+                    delete OUTemplate.parent;  // PATCH method doesn't accept it
+                    
                     var tempData;
                     for (var i = 1; i<metadata.length; i++ ){
                         tempData =  getCellData(array, thisLetter(colNo+i) + row);
@@ -238,12 +240,13 @@ function addOU(array, getParentFunction, colNo, row){
                             OUTemplate[metadata[i]] = getCellData(array, thisLetter(colNo+i) + row);                            
                         }
                     }
+                    
                     console.log("Patch OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo - numberOfMetadata]);
                     console.log(OUTemplate);
-                    return sendObjectTo(ORG_UNITS+parameters, OUTemplate, PATCH);
+                    return sendObjectTo(ORG_UNITS+"/"+OUTemplate.id, OUTemplate, PATCH);
                     
                 } else {
-                    //create
+                    // No ID fournished, so create it
 
                     return $.when(getNewID())
                     .done(function(returnData){
@@ -252,6 +255,8 @@ function addOU(array, getParentFunction, colNo, row){
                         } else {
                             OUTemplate.id= returnData.codes[0];
                         }
+                        parentUIDs[colNo] = OUTemplate.id; 
+                        OUTemplate.parent.id = parentUIDs[colNo - numberOfMetadata];                       
 
                         for (var i = 1; i<metadata.length; i++ ){
                             OUTemplate[metadata[i]] = getCellData(array, thisLetter(colNo+i) + row);
@@ -260,7 +265,6 @@ function addOU(array, getParentFunction, colNo, row){
 
                         console.log("add OU [" + thisLetter(colNo) + row + "] : " + OUTemplate.name + " " + OUTemplate.id + " parent = " + parentUIDs[colNo - numberOfMetadata]);
                         console.log(OUTemplate);
-                        //return;
                         return sendObjectTo(ORG_UNITS+parameters, OUTemplate, POST);
                         
                     });
