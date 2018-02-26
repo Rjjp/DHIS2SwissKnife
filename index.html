@@ -420,13 +420,29 @@
             
         });
 
+        function deleteArrayOUInOrder(array){
+            if (array.length == 1 ){
+                return deleteOrgUnit(array[0].attributes[0].value);
+            } else {
+                return $.when(deleteOrgUnit(array[array.length-1].attributes[0].value))
+                .done(function(returnData){
+                    return deleteArrayOUInOrder(array.slice(0,-1));
+                });
+            }
+        }
+
         $( "#applyDel" ).click( function( event ) {
             event.preventDefault();
 
-            $( "#orgUnitListDel li" ).each(function( index ) {
-                var id = $( this ).attr("value");
-                deleteOrgUnit(id);
-            });
+
+            if($("input[name='del_mode']:checked").length > 0 && $("input[name='del_mode']:checked")[0].id.localeCompare("del_mode_serial") == 0){
+                deleteArrayOUInOrder($( "#orgUnitListDel li" ).toArray())
+            } else {
+                $( "#orgUnitListDel li" ).each(function( index ) {
+                    var id = $( this ).attr("value");
+                    deleteOrgUnit(id);
+                });
+            }
             $("#orgUnitListDel").empty();
 
         });
@@ -686,12 +702,18 @@ function toLog(text){
                     <button id="searchDel" >Search!</button>
 
                     <div class="listDiv"><ul id="orgUnitListDel"></ul></div>
-
+                    <fieldset>
+                        <legend>Deletion mode: </legend>
+                        <label for="del_mode_serial">Serial</label>
+                        <input type="radio" class="checkboxradio" name="del_mode" id="del_mode_serial">
+                        <label for="del_mode_parallel">Parallel</label>
+                        <input type="radio" class="checkboxradio" checked name="del_mode" id="del_mode_parallel">
+                    </fieldset>
                     <button id="applyDel" >Apply!</button>
                 </div>
             </div>
         </div>
-        <div id="footer"> Swiss Knife App vbeta.8.1 07.02.2018 </div>
+        <div id="footer"> Swiss Knife App vbeta.8.2 26.02.2018 </div>
         
     </body>
 </html>
