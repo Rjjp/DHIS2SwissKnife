@@ -320,7 +320,8 @@
             
             
             $("#eventList").empty();
-            autocompleteSearcher("program", programs, onClickProgram, 1, 300);
+            autocompleteSearcher("programA", programs, onClickProgram, 1, 300);
+            autocompleteSearcher("programB", programs, onClickProgram, 1, 300);
             autocompleteSearcher("orgUnit", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
             // TODO fill once
             autocompleteSearcher("orgUnitDel", orgUnitsDataSourceFunction, onClickOU_DCM, 3, 300);
@@ -341,7 +342,7 @@
 
         $( "#search" ).click( function( event ) {
             var orgUnit = $("#orgUnit").text();
-            var program = $("#program").text();
+            var program = $("#programA").text();
             var extraParams = $("#extraParams").val();
             $("#eventList").empty();
 
@@ -446,6 +447,42 @@
             $("#orgUnitListDel").empty();
 
         });
+
+        $( "#applyProgDel" ).click( function( event ) {
+            event.preventDefault();
+
+            $.when(
+                getObjectWithDependencies("programs", $("#programB").text())
+            )
+            .done(function(programFull){
+                deleteMultipleMeta("programIndicators", programFull, 0);
+                deleteMultipleMeta("programRules", programFull, 0);
+                deleteMultipleMeta("programRuleVariables", programFull, 0);
+                deleteMultipleMeta("programRuleActions", programFull, 0);
+                
+            });
+
+
+
+        });
+
+        function deleteTestMeta(type, id){
+            console.log(type + " - " + id);
+        }
+        function deleteMultipleMeta(type, fullMeta, idx){
+            if (idx < fullMeta[type].length ) {
+                return  $.when(
+                    deleteTestMeta(type, fullMeta[type][idx].id)
+                    )
+                .done(function(){
+                    deleteMultipleMeta(type, fullMeta, idx + 1);
+
+                });
+            } else {
+                return;
+            }
+
+        }
 
         /* OrgUnit Creator */
         autocompleteSearcher("firstColumn", excelHeaders, doNothing, 0, 0);
@@ -580,11 +617,12 @@ function toLog(text){
                     <li><a href="#tabs-2">2. Aggregated data</a></li>
                     <li><a href="#tabs-3">3. OrgUnits Creator</a></li>
                     <li><a href="#tabs-4">4. OrgUnits Remove</a></li>
+                    <li><a href="#tabs-5">5. Program Remover</a></li>
                 </ul>
                 <div id="tabs-1">	
                     <div>
-                        <label for="program">Program: </label>
-                        <input id="program">
+                        <label for="programA">Program: </label>
+                        <input id="programA">
                     </div>
                     
                     
@@ -710,6 +748,15 @@ function toLog(text){
                         <input type="radio" class="checkboxradio" checked name="del_mode" id="del_mode_parallel">
                     </fieldset>
                     <button id="applyDel" >Apply!</button>
+                </div>
+                <div id="tabs-5">	
+                    
+                    <div>
+                        <label for="programB">Program: </label>
+                        <input id="programB">
+                    </div>
+
+                    <button id="applyProgDel" >Apply!</button>
                 </div>
             </div>
         </div>

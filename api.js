@@ -221,7 +221,20 @@ var PUT = "PUT";
         });
     }
 
-  
+
+    function deleteMeta(id, type){
+        var builtUrl = buildAPIUrl(type);
+        builtUrl += "/"+id;
+        return $.ajax({
+            url: builtUrl,
+            type: 'DELETE'
+            
+        }).then(function(data) {
+            return data;
+        });
+    }
+
+    //deprectated: use deleteMeta
     function deleteOrgUnit(id){
         var builtUrl = buildAPIUrl(ORG_UNITS);
         builtUrl += "/"+id;
